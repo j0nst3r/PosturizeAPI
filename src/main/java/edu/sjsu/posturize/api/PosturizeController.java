@@ -98,7 +98,7 @@ public class PosturizeController {
 	     System.out.println("Update time : " + result.get().getUpdateTime());
         
         // [START fs_get_doc_as_map]
-	    docRef = db.collection("users").document("UnJhPIzXSBWlBYKBJD2I");
+	    docRef = db.collection("users").document("alovelace");
 	    // asynchronously retrieve the document
 	    ApiFuture<DocumentSnapshot> future = docRef.get();
 	    // ...
