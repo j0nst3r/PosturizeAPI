@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -42,8 +43,11 @@ import java.util.Map;
 public class PosturizeController {
 
 
-    @Value("${firestore.credential}")
+	@Value("${firestore.credential}")
     private String credential;
+	
+	@Value("${firestore.credentialPath}")
+    private String credentialPath;
     
     @Value("${firestore.projectId}")
     private String projectId;
@@ -73,8 +77,11 @@ public class PosturizeController {
     @RequestMapping(path = "/firestore", method = RequestMethod.GET)
     @ResponseBody
     public String test() throws InterruptedException, ExecutionException, IOException{
+    	InputStream is = new ClassPathResource(credentialPath).getInputStream();
+    	
     	FirestoreOptions firestoreOptions = FirestoreOptions.newBuilder()
-                .setCredentials(ServiceAccountCredentials.fromStream(new FileInputStream(System.getenv(credential))))
+    			//.setCredentials(ServiceAccountCredentials.fromStream(new FileInputStream(System.getenv(credential))))
+    			.setCredentials(ServiceAccountCredentials.fromStream(is))
                 .setProjectId(projectId).build();
         Firestore db = firestoreOptions.getService();
     
