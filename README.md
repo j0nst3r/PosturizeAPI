@@ -5,8 +5,8 @@ mvn spring-boot:run to start server
 
 /health - health check on server
 
-/firestore - test firestore connection
+/home/firestore - test firestore connection
 
-/firebase - test firebase connection
+/home/firebase - test firebase connection
 
 if server doesnt start due to missing file then need to add the env variable GOOGLE_APPLICATION_CREDENTIALS to point to the firestore json
