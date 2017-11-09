@@ -27,6 +27,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
+import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.database.DataSnapshot;
@@ -86,19 +87,7 @@ public class PosturizeController {
         Firestore db = firestoreOptions.getService();
     
         DocumentReference docRef = db.collection("users").document("alovelace");
-	     // Add document data  with id "alovelace" using a hashmap
-	     Map<String, Object> data = new HashMap<>();
-	     data.put("first", "Ada");
-	     data.put("last", "Lovelace");
-	     data.put("born", 1815);
-	     //asynchronously write data
-	     ApiFuture<WriteResult> result = docRef.set(data);
-	     // ...
-	     // result.get() blocks on response
-	     System.out.println("Update time : " + result.get().getUpdateTime());
-        
         // [START fs_get_doc_as_map]
-	    docRef = db.collection("users").document("alovelace");
 	    // asynchronously retrieve the document
 	    ApiFuture<DocumentSnapshot> future = docRef.get();
 	    // ...
@@ -110,8 +99,23 @@ public class PosturizeController {
 	      System.out.println("No such document!");
 	    }
 	    // [END fs_get_doc_as_map]
-	    return (document.exists()) ? document.getData().toString() : null;
+	    //return (document.exists()) ? document.getData().toString() : null;
+	    
+	    //gets the user collection and then get a list of documents within the collection
+	    Query temp = db.collection("users");
+		ApiFuture<QuerySnapshot> collections = temp.get();
+		for(DocumentSnapshot doc : collections.get().getDocuments()){
+			System.out.println(doc.getId());
+		}
+		
+		
+		return "done executing code....";
+	    
     }
+    
+    
+    
+    
     
     @RequestMapping(path = "/firebase", method = RequestMethod.GET)
     @ResponseBody
