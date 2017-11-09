@@ -31,8 +31,6 @@ import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.WriteResult;
 
-import edu.sjsu.posturize.domain.DailySlouch;
-
 //import com.google.auth.oauth2.GoogleCredentials;
 
 @Configuration
