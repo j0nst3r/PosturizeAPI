@@ -75,7 +75,7 @@ public class FirebaseConfig {
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 
     //@Scheduled(cron="0 15 */1 * * *")//will run every when its :15 of every hours
-    @Scheduled(fixedRate = 50000)
+    @Scheduled(cron="0 */2 * * * *")
     public void dailyAnalysis() throws InterruptedException, ExecutionException {
         
     	Date curDate = new Date();
@@ -83,7 +83,7 @@ public class FirebaseConfig {
         log.info("The time is now {}", dateFormat.format(curDate));
         
         //WILL QUERY FOR ALL USERS THAT HAVE SYNC'd BEFORE CURRENT TIME
-        Query query = db.collection("users").whereLessThanOrEqualTo("lastSync", curDate);
+        Query query = db.collection("users").whereEqualTo("needSync", true);
         List<DocumentSnapshot> docList = query.get().get().getDocuments();
         //List<DocumentSnapshot> docList = this.getCollectionDocuments("users");
         for(DocumentSnapshot doc : docList){
@@ -127,13 +127,15 @@ public class FirebaseConfig {
         	data.put("daily", analysisArray);
         	result = docRef.update(data);
         	log.info("analysis data updated");
+        	
+        	docRef = db.collection("users").document(userId);
+        	data = new HashMap<>();
+        	data.put("needSync", false);
+        	result = docRef.update(data);
+        	log.info("users status updated");
         }
-        	
-        	
-        	
-        	//this.performDailyAnalysis(userSlouch);
-        	//--run analysis on data and store to anaylsis collection
-        	//--archive the currentDay data and reset currentDay document    	
+        
+        log.info("Daily Analysis Finished");    	
     }
     
     //This method will be given a collection name and return all documents within the collection
