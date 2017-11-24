@@ -3,6 +3,7 @@ package edu.sjsu.posturize.api.firebase;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -43,17 +44,17 @@ public class FirebaseConfig {
     @Value("${firestore.projectId}")
     private String projectId;
     
-    private Firestore db;
+    private static Firestore db;
     
-    private final String userCollection = "users";
-    private final String analysisCollection = "analysis";
-    private final String slouchCollection = "slouches";
-    private final String archiveCollection = "archive";
-    private final String dailyAnalysis = "daily";
-    private final String weeklyAnalysis = "weekly";
-    private final String monthlyAnalysis = "monthly";
+    private static final String USER_COLLECTION = "users";
+    private static final String ANALYSIS_COLLECTION = "analysis";
+    private static final String SLOUCH_COLLECTION = "slouches";
+    private static final String ARCHIVE_COLLECTION = "archive";
+    private static final String DAILY_ANALYSIS = "daily";
+    private static final String WEEKLY_ANALYSIS = "weekly";
+    private static final String MONTHLY_ANALYSIS = "monthly";
     
-    private final int secPerDay = 86400;
+    private static final int SEC_PER_DAY = 86400;
     
     //analysis/<userId>/<daily|weekly|monthly>/<day/week/month timestamp> => will get the array of analysis
     //slouches/<userId>/<archive>/<day's time stamp> => get archived data > array of time stamps and slouches
@@ -68,14 +69,18 @@ public class FirebaseConfig {
     			//.setCredentials(ServiceAccountCredentials.fromStream(new FileInputStream(System.getenv(credential))))
     			.setCredentials(ServiceAccountCredentials.fromStream(is))
                 .setProjectId(projectId).build();
-        this.db = firestoreOptions.getService();
+        FirebaseConfig.db = firestoreOptions.getService();
 	}
+    
+    public static Firestore getInstance(){
+    		return db;
+    }
     
     private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 
-    //@Scheduled(cron="0 15 */1 * * *")//will run every when its :15 of every hours
-    @Scheduled(cron="0 */2 * * * *")
+    @Scheduled(cron="0 15 */1 * * *")//will run every when its :15 of every hours
+    //@Scheduled(cron="0 */2 * * * *")
     public void dailyAnalysis() throws InterruptedException, ExecutionException {
         
     	Date curDate = new Date();
@@ -83,27 +88,27 @@ public class FirebaseConfig {
         log.info("The time is now {}", dateFormat.format(curDate));
         
         //WILL QUERY FOR ALL USERS THAT HAVE SYNC'd BEFORE CURRENT TIME
-        Query query = db.collection("users").whereEqualTo("needSync", true);
+        Query query = db.collection("users").whereEqualTo("isSynced", true);
         List<DocumentSnapshot> docList = query.get().get().getDocuments();
-        //List<DocumentSnapshot> docList = this.getCollectionDocuments("users");
+        //List<DocumentSnapshot> docList = getCollectionDocuments("users");
         for(DocumentSnapshot doc : docList){
         	String userId = doc.getId();
         	//pulls individual data that is needed to analysis
-        	DocumentSnapshot userSlouch = this.getDocument(this.slouchCollection, userId);
+        	DocumentSnapshot userSlouch = getDocument(SLOUCH_COLLECTION, userId);
         	log.info("Accessing User Slouch data:" + userId + " data: " + userSlouch.getData());
-        	DocumentSnapshot userAnalysis = this.getDocument(this.analysisCollection, userId);
-        	log.info("Accessing User Anaylsis data:" + userId + " data: " + userAnalysis.getData());
+        	DocumentSnapshot userAnalysis = getDocument(ANALYSIS_COLLECTION, userId);
+        	log.info("Accessing User Analysis data:" + userId + " data: " + userAnalysis.getData());
         	
         	//archive slouch data
         	//save userSlouch.getData() into archive/<day time stamp>
-        	Date yesterday = new Date((curDate.getTime()/1000/secPerDay-1)*secPerDay*1000);
-        	DocumentReference docRef = db.collection(slouchCollection).document(userId).collection(archiveCollection).document(Long.toString(yesterday.getTime()/1000));
+        	Date yesterday = new Date((curDate.getTime()/1000/SEC_PER_DAY-1)*SEC_PER_DAY*1000);
+        	DocumentReference docRef = db.collection(SLOUCH_COLLECTION).document(userId).collection(ARCHIVE_COLLECTION).document(Long.toString(yesterday.getTime()/1000));
         	Map<String, Object> docData = userSlouch.getData();
         	ApiFuture<WriteResult> future = docRef.set(docData);
         	log.info("slouch data archived");
         	
         	//delete slouch data and reset
-        	docRef = db.collection(slouchCollection).document(userId);
+        	docRef = db.collection(SLOUCH_COLLECTION).document(userId);
         	Map<String, Object> data = new HashMap<>();
         	data.put("times", new ArrayList<>());
         	data.put("slouches", new ArrayList<>());
@@ -111,18 +116,18 @@ public class FirebaseConfig {
         	log.info("slouch data resetted");
         	
         	//perform analysis
-        	ArrayList<Object> analysisArray = this.performDailyAnalysis(userSlouch);
+        	ArrayList<Object> analysisArray = performDailyAnalysis(userSlouch);
         	
         	
         	//archive most recent analysis
-        	docRef = db.collection(analysisCollection).document(userId).collection(dailyAnalysis).document(Long.toString(yesterday.getTime()/1000));
+        	docRef = db.collection(ANALYSIS_COLLECTION).document(userId).collection(DAILY_ANALYSIS).document(Long.toString(yesterday.getTime()/1000));
         	data = new HashMap<>();
-        	data.put("result", userAnalysis.getData().get(dailyAnalysis));
+        	data.put("result", userAnalysis.getData().get(DAILY_ANALYSIS));
         	future = docRef.set(data);
         	log.info("old analysis archived");
         	
         	//update new analysis
-        	docRef = db.collection(analysisCollection).document(userId);
+        	docRef = db.collection(ANALYSIS_COLLECTION).document(userId);
         	data = new HashMap<>();
         	data.put("daily", analysisArray);
         	result = docRef.update(data);
@@ -130,7 +135,7 @@ public class FirebaseConfig {
         	
         	docRef = db.collection("users").document(userId);
         	data = new HashMap<>();
-        	data.put("needSync", false);
+        	data.put("isSynced", false);
         	result = docRef.update(data);
         	log.info("users status updated");
         }
@@ -138,24 +143,74 @@ public class FirebaseConfig {
         log.info("Daily Analysis Finished");    	
     }
     
-    //This method will be given a collection name and return all documents within the collection
-    private List<DocumentSnapshot> getCollectionDocuments(String collection) throws InterruptedException, ExecutionException{
-    	Query query = db.collection(collection);
-    	ApiFuture<QuerySnapshot> collections = query.get();
-    	return collections.get().getDocuments();
+    public static String forcedAnalysis(String userId) throws InterruptedException, ExecutionException {
+        
+    	Date curDate = new Date();
+    	log.info("Running Daily Analysis...");
+        log.info("The time is now {}", dateFormat.format(curDate));
+        
+        //pulls individual data that is needed to analysis
+        DocumentSnapshot userSlouch = getDocument(SLOUCH_COLLECTION, userId);
+        log.info("Accessing User Slouch data:" + userId + " data: " + userSlouch.getData());
+        DocumentSnapshot userAnalysis = getDocument(ANALYSIS_COLLECTION, userId);
+        log.info("Accessing User Analysis data:" + userId + " data: " + userAnalysis.getData());
+        
+        if(userSlouch.exists() && userAnalysis.exists()){
+	        //archive slouch data
+	        //save userSlouch.getData() into archive/<day time stamp>
+	        Date yesterday = new Date((curDate.getTime()/1000/SEC_PER_DAY-1)*SEC_PER_DAY*1000);
+	        DocumentReference docRef;
+	        Map<String, Object> docData;
+	        ApiFuture<WriteResult> future;
+	        Map<String, Object> data = new HashMap<>();
+	        ApiFuture<WriteResult> result;
+	        	
+	        //perform analysis
+	        ArrayList<Object> analysisArray = performDailyAnalysis(userSlouch);
+	        	
+	        //update new analysis
+	        docRef = db.collection(ANALYSIS_COLLECTION).document(userId);
+	        data = new HashMap<>();
+	        data.put("daily", analysisArray);
+	        result = docRef.update(data);
+	        
+	        log.info("Forced Analysis Finished");
+	        return "OK";
+        }else{
+        	log.info("No User Found....");
+	        return "ERROR";
+        }
+        
     }
+
     
     //This method will be given a collection name and return all documents within the collection
-    private DocumentSnapshot getDocument(String collection, String documentId) throws InterruptedException, ExecutionException{
+    private static DocumentSnapshot getDocument(String collection, String documentId) throws InterruptedException, ExecutionException{
     	DocumentReference docRef = db.collection(collection).document(documentId);
     	ApiFuture<DocumentSnapshot> doc = docRef.get();
     	return doc.get();
     }
     
     //perform the analysis on the given set of data
-    private ArrayList<Object> performDailyAnalysis(DocumentSnapshot userSlouch){
+    private static ArrayList<Object> performDailyAnalysis(DocumentSnapshot userSlouch){
     	Map<String, Object> dataMap = userSlouch.getData();
+    	ArrayList<Double> slouches = (ArrayList<Double>) dataMap.get("slouches");
+    	ArrayList<Date> times = (ArrayList<Date>) dataMap.get("times");
+    	Double[] slouchData = new Double[slouches.size()];
+    	Date[] dateData = new Date[times.size()];
+    	slouchData = slouches.toArray(slouchData);
+    	dateData = times.toArray(dateData);
     	ArrayList<Object> results = new ArrayList<>();
+    	
+    	//total number of slouches recorded today
+    	int numSlouches = slouchData.length;
+    	
+    	//highest density slouch
+    	int timeLimit = 60*60*1000;
+    	int begIndex = 0;
+    	int endIndex = 0;
+    	
+    	results.add("Total number of slouches recorded: " + numSlouches);
     	
     	results.add("HI THERE");
     	results.add("JUST SOME HARD CODED THINGS FOR TESTING");

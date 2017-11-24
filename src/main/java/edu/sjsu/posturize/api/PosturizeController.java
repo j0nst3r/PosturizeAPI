@@ -16,6 +16,10 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -36,6 +40,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+
+import edu.sjsu.posturize.api.firebase.FirebaseConfig;
 
 import java.util.Map;
 import java.util.Random;
@@ -122,7 +128,7 @@ public class PosturizeController {
     	ArrayList<Date> timesDev = new ArrayList<>();
     	ArrayList<Double> slouchesQA = new ArrayList<>();
     	ArrayList<Date> timesQA = new ArrayList<>();
-    	for(int a = 0; a < 10; a++){
+    	for(int a = 0; a < 20; a++){
     		Date curDate = new Date();
     		Random rando = new Random(System.currentTimeMillis());
     		
@@ -154,25 +160,12 @@ public class PosturizeController {
     
     
     
-    @RequestMapping(path = "/firebase", method = RequestMethod.GET)
+    @RequestMapping(path = "/forceAnalysis/{userId}", method = RequestMethod.POST)
     @ResponseBody
-    public String firebase() throws InterruptedException, ExecutionException, IOException{
-		// As an admin, the app has access to read and write all data, regardless of Security Rules
-		DatabaseReference ref = FirebaseDatabase
-			    .getInstance()
-			    .getReference("users");
-			ref.addListenerForSingleValueEvent(new ValueEventListener() {
-			    @Override
-			    public void onDataChange(DataSnapshot dataSnapshot) {
-			        Object document = dataSnapshot.getValue();
-			        System.out.println(document);
-			    }
-
-				@Override
-				public void onCancelled(DatabaseError e) {
-					// TODO Auto-generated method stub
-				}
-			});
-		return "testing...";
+    public ResponseEntity<?> firebase(@PathVariable String userId) throws InterruptedException, ExecutionException, IOException{
+		HttpHeaders httpHeaders = new HttpHeaders();
+		String resultData = FirebaseConfig.forcedAnalysis(userId);	
+			
+		return new ResponseEntity<String>(resultData, httpHeaders, HttpStatus.OK);
     }
 }
