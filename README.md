@@ -1,7 +1,7 @@
 # Posturize Server
 Application Server - Currently used for perform the daily analysis cron job.
 
-Wearable repository: 
+Wearable repository: https://github.com/j0nst3r/PosturizeWearable
 
 Android repository: https://github.com/mattmontero/Posturize
 
@@ -19,3 +19,4 @@ run `mvn install` to download and install all dependency
 run `mvn spring-boot:run` to launch the application server using spring-boot
 
 ## Notes
+Spring Framework, Spring Boot, Java, Firestore
