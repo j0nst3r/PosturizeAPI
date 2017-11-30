@@ -12,10 +12,10 @@ Make sure local machine have Java 1.8 and also Maven installed.
 2. Place the two credential files in the *PosturizeAPI/src/main/resource* folder
 
 ## Install
-run `mvn install` to download and install all dependency
+1. run `mvn install` to download and install all dependency
 
 ## Run
-run `mvn spring-boot:run` to launch the application server using spring-boot
+1. run `mvn spring-boot:run` to launch the application server using spring-boot
 
 ## Notes
 Spring Framework, Spring Boot, Java, Firestore
