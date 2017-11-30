@@ -1,10 +1,9 @@
 # Posturize Server
 Application Server - Currently used for perform the daily analysis cron job.
 
-Wearable repository: https://github.com/j0nst3r/PosturizeWearable
+Android repository: [Andriod Application](https://github.com/mattmontero/Posturize)
 
-Android repository: https://github.com/mattmontero/Posturize
-
+Posturize Wearable repository: [Wearable](https://github.com/j0nst3r/PosturizeWearable)
 ## Setup
 Make sure local machine have Java 1.8 and also Maven installed.
 1. Download repository, and both credential files
