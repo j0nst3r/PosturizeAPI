@@ -153,19 +153,14 @@ public class PosturizeController {
         dataQA.put("slouches", slouchesQA);
     	resultQA = docRefQA.update(dataQA);
     	
-		
 		return "Finished populate Dev-Test and QA-Test";    
     }
-    
-    
-    
     
     @RequestMapping(path = "/forceAnalysis/{userId}", method = RequestMethod.POST)
     @ResponseBody
     public ResponseEntity<?> firebase(@PathVariable String userId) throws InterruptedException, ExecutionException, IOException{
 		HttpHeaders httpHeaders = new HttpHeaders();
-		String resultData = FirebaseConfig.forcedAnalysis(userId);	
-			
+		String resultData = FirebaseConfig.forcedAnalysis(userId);			
 		return new ResponseEntity<String>(resultData, httpHeaders, HttpStatus.OK);
     }
 }

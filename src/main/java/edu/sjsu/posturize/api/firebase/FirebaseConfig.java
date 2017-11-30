@@ -44,8 +44,6 @@ public class FirebaseConfig {
     @Value("${firestore.projectId}")
     private String projectId;
     
-    private static Firestore db;
-    
     private static final String USER_COLLECTION = "users";
     private static final String ANALYSIS_COLLECTION = "analysis";
     private static final String SLOUCH_COLLECTION = "slouches";
@@ -55,12 +53,11 @@ public class FirebaseConfig {
     private static final String MONTHLY_ANALYSIS = "monthly";
     
     private static final int SEC_PER_DAY = 86400;
+    private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
     
-    //analysis/<userId>/<daily|weekly|monthly>/<day/week/month timestamp> => will get the array of analysis
-    //slouches/<userId>/<archive>/<day's time stamp> => get archived data > array of time stamps and slouches
-    //slouches/<userId>/<day's time stamp> => can unprocessed data > array of time stamps and slouches
+    private static Firestore db;
     
-    ///slouches/114685049190037736486/archive/day2_time_stamp
     @PostConstruct
 	public void init() throws FileNotFoundException, IOException {
     	InputStream is = new ClassPathResource(credentialPath).getInputStream();
@@ -72,15 +69,16 @@ public class FirebaseConfig {
         FirebaseConfig.db = firestoreOptions.getService();
 	}
     
+    /* 
+     * @return DB object 
+     */
     public static Firestore getInstance(){
     		return db;
     }
     
-    private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+    
 
     @Scheduled(cron="0 15 */1 * * *")//will run every when its :15 of every hours
-    //@Scheduled(cron="0 */2 * * * *")
     public void dailyAnalysis() throws InterruptedException, ExecutionException {
         
     	Date curDate = new Date();
@@ -133,6 +131,7 @@ public class FirebaseConfig {
         	result = docRef.update(data);
         	log.info("analysis data updated");
         	
+        	//set the synced flag in user document to false
         	docRef = db.collection("users").document(userId);
         	data = new HashMap<>();
         	data.put("isSynced", false);
@@ -143,8 +142,13 @@ public class FirebaseConfig {
         log.info("Daily Analysis Finished");    	
     }
     
+    /*
+     * Force the analysis to run for specific user(disregard the normal cron job)
+     * 
+     * @param  userId is specified user to run the analysis on
+     * @return String 'OK' if analysis executes correctl, otherwise 'ERROR'
+     */
     public static String forcedAnalysis(String userId) throws InterruptedException, ExecutionException {
-        
     	Date curDate = new Date();
     	log.info("Running Daily Analysis...");
         log.info("The time is now {}", dateFormat.format(curDate));
@@ -183,15 +187,25 @@ public class FirebaseConfig {
         
     }
 
-    
-    //This method will be given a collection name and return all documents within the collection
+    /*
+     * provided the collection name and document Id, returns the DocumentSnapshot
+     * 
+     * @param collection the collection name
+     * @param documentId the documentId
+     * @return returns a DocumentSnapshot for the given collection/documentId
+     */
     private static DocumentSnapshot getDocument(String collection, String documentId) throws InterruptedException, ExecutionException{
     	DocumentReference docRef = db.collection(collection).document(documentId);
     	ApiFuture<DocumentSnapshot> doc = docRef.get();
     	return doc.get();
     }
     
-    //perform the analysis on the given set of data
+    /*
+     *perform the analysis on the given set of data 
+     *
+     * @param userSlouch a DocumentSnapshot of the user's slouch data
+     * @return an ArrayList<Object> that contains the result string of all analysis 
+     */
     private static ArrayList<Object> performDailyAnalysis(DocumentSnapshot userSlouch){
     	Map<String, Object> dataMap = userSlouch.getData();
     	ArrayList<Double> slouches = (ArrayList<Double>) dataMap.get("slouches");
@@ -218,38 +232,4 @@ public class FirebaseConfig {
     	
     	return results;
     }
-    
-    
-    /*
-     * HOW TO CREATE A NEW DOCUMENT
-     * 
-        DocumentReference docRef = db.collection("users").document("jc-test");
-	    // Add document data  with id "alovelace" using a hashmap
-	    Map<String, Object> data = new HashMap<>();
-	    data.put("first", "J");
-	    data.put("last", "C");
-	    data.put("born", 1989);
-	    data.put("time-stamp", dateFormat.format(new Date()));
-	    //asynchronously write data
-	    ApiFuture<WriteResult> result = docRef.set(data);
-	    // ...
-	    // result.get() blocks on response
-	    System.out.println("Update time : " + result.get().getUpdateTime());
-     * 
-     * 
-     */
-    
-    /*
-     * HOW TO DELETE A DOCUMENT/FIELDS
-     * 
-        ApiFuture<WriteResult> writeResult = db.collection(<name>).document(<name>).delete()
-        
-        DocumentReference docRef = db.collection(<col-name>).document(<doc-name>);
-	    Map<String, Object> data = new HashMap<>();
-	    data.put("first", FieldValue.delete());
-	    ApiFuture<WriteResult> result = docRef.update(data);
-     * 
-     * 
-     */
-   
 }
